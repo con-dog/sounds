@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
+#include <time.h>
 
-// WAV header structure (same as before)
+// WAV header structure
 typedef struct
 {
   char riff_id[4];
@@ -21,14 +22,12 @@ typedef struct
   uint32_t data_size;
 } WAVHeader;
 
-// Note definition structure
 typedef struct
 {
-  float frequency; // in Hz
-  float duration;  // in seconds
+  float frequency;
+  float duration;
 } Note;
 
-// Common note frequencies (A4 = 440Hz)
 #define NOTE_C4 261.63f
 #define NOTE_D4 293.66f
 #define NOTE_E4 329.63f
@@ -40,18 +39,27 @@ typedef struct
 
 int main()
 {
-  const int SAMPLE_RATE = 44100;
+  const int SAMPLE_RATE = 20000;
+  const int NUM_NOTES = 100;
+  srand(time(NULL));
 
-  // Define a simple melody (frequencies and durations)
-  Note melody[] = {
-      {NOTE_C4, 0.7f}, // C4 for 0.5 seconds
-      {NOTE_E4, 0.1f}, // E4 for 0.5 seconds
-      {NOTE_G4, 0.3f}, // G4 for 0.5 seconds
-      {NOTE_C5, 1.0f}, // C5 for 1.0 seconds
-  };
-  const int NUM_NOTES = sizeof(melody) / sizeof(melody[0]);
+  Note melody[NUM_NOTES]; // Use constant for array size
+  float freqs[] = {
+      NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4,
+      NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5};
 
-  // Calculate total duration and number of samples
+  // Generate random melody
+  for (int i = 0; i < NUM_NOTES; i++)
+  {
+    int random_note_index = rand() % 8;                  // Simpler random number generation
+    float random_time = (float)(rand() % 8 + 1) / 10.0f; // 0.1 to 0.8 seconds
+
+    melody[i] = (Note){
+        .frequency = freqs[random_note_index],
+        .duration = random_time};
+  }
+
+  // Calculate total duration and samples
   float total_duration = 0;
   for (int i = 0; i < NUM_NOTES; i++)
   {
@@ -59,8 +67,8 @@ int main()
   }
   const int NUM_SAMPLES = SAMPLE_RATE * total_duration;
 
-  // Allocate audio buffer
-  int16_t *audio_data = (int16_t *)malloc(NUM_SAMPLES * sizeof(int16_t));
+  // Allocate and clear audio buffer
+  int16_t *audio_data = (int16_t *)calloc(NUM_SAMPLES, sizeof(int16_t));
   if (!audio_data)
   {
     printf("Memory allocation failed\n");
@@ -76,10 +84,9 @@ int main()
     for (int j = 0; j < note_samples; j++)
     {
       float t = (float)j / SAMPLE_RATE;
-      // Square wave generation with simple envelope
-      float envelope = 1.0f - (float)j / note_samples; // Simple linear fade-out
+      float envelope = 1.0f - (float)j / note_samples;
       audio_data[current_sample + j] =
-          (sin(2.0f * M_PI * melody[i].frequency * t) > 0.0f ? 32767 : -32767) * envelope * 0.8f; // 0.8f to prevent clipping when notes overlap
+          (sin(2.0f * M_PI * melody[i].frequency * t) > 0.0f ? 32767 : -32767) * envelope * 0.8f;
     }
     current_sample += note_samples;
   }
